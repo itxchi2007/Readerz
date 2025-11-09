@@ -11,45 +11,43 @@ on:
 
 jobs:
   build:
-    name: Build Debug APK
     runs-on: ubuntu-latest
+    name: Build Readerz Debug APK
 
     steps:
-      # 1. Checkout repository
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Set up Java (JDK 17 recommended for Android 15+)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # 3. Grant permission to gradlew (if it exists)
-      - name: Make gradlew executable
+      - name: Find Gradle Wrapper
+        id: find_gradlew
         run: |
-          if [ -f ./gradlew ]; then
-            chmod +x ./gradlew
+          gradle_path=$(find . -type f -name "gradlew" | head -n 1)
+          if [ -z "$gradle_path" ]; then
+            echo "❌ gradlew not found!"
+            exit 1
           fi
+          echo "gradle_path=$gradle_path" >> $GITHUB_ENV
 
-      # 4. Build the Debug APK
+      - name: Grant execute permission
+        run: chmod +x "$gradle_path"
+
       - name: Build Debug APK
         run: |
-          if [ -f ./gradlew ]; then
-            ./gradlew assembleDebug
-          else
-            cd */ && ./gradlew assembleDebug
-          fi
+          gradle_dir=$(dirname "$gradle_path")
+          cd "$gradle_dir"
+          ./gradlew assembleDebug
 
-      # 5. Upload any found Debug APKs
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: Readerz-Debug-APK
           path: '**/build/outputs/apk/debug/*.apk'
 
-      # Optional - show build folder for debugging
-      - name: List APK Output Folders
-        run: |
-          find . -type f -name "*.apk"
+      - name: Show APK paths for debugging
+        run: find . -type f -name "*.apk"
